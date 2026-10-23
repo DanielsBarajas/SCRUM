@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Nexo · Soporte interno{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    .form-input { width: 100%; border: 1px solid #d1d5db; border-radius: .75rem; padding: .7rem .85rem; background: white; }
+    .form-input:focus { outline: 2px solid #2563eb; border-color: transparent; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  {% if user.is_authenticated %}
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      <a href="{% url 'dashboard' %}" class="text-xl font-bold tracking-tight text-blue-800">Nexo <span class="font-normal text-slate-500">Soporte</span></a>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <p class="text-sm font-semibold">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-xs text-slate-500">{{ user.get_rol_display }}</p>
+        </div>
+        {% if user.rol == "COORDINADOR" or user.rol == "AUDITOR" %}
+          <a href="{% url 'auditoria' %}" class="text-sm font-medium text-slate-600 hover:text-blue-700">Auditoría</a>
+        {% endif %}
+        {% if user.rol == "COORDINADOR" or user.rol == "AUDITOR" %}
+          <a href="{% url 'exportar_csv' %}?q={{ q|urlencode }}&amp;estado={{ estado_seleccionado|urlencode }}&amp;prioridad={{ prioridad_seleccionada|urlencode }}&amp;categoria={{ categoria|urlencode }}" class="text-sm font-medium text-slate-600 hover:text-blue-700">Exportar CSV</a>
+        {% endif %}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100">Salir</button>
+        </form>
+      </div>
+    </div>
+  </header>
+  {% endif %}
+  <main class="mx-auto max-w-7xl px-5 py-8">
+    {% if messages %}
+      <div class="mb-5 space-y-2">
+        {% for message in messages %}
+          <div class="rounded-xl border px-4 py-3 text-sm {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

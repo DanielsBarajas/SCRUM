@@ -1,0 +1,96 @@
+{% extends "tickets/base.html" %}
+{% block title %}Solicitud #{{ solicitud.pk }} · Nexo{% endblock %}
+{% block content %}
+<a href="{% url 'dashboard' %}" class="text-sm font-medium text-blue-700 hover:underline">← Volver a solicitudes</a>
+<div class="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+  <div class="space-y-6">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div><p class="text-sm text-slate-500">Solicitud #{{ solicitud.pk }} · {{ solicitud.categoria }}</p><h1 class="mt-1 text-2xl font-bold">{{ solicitud.titulo }}</h1></div>
+        <span class="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-800">{{ solicitud.get_estado_display }}</span>
+      </div>
+      <div class="mt-6 whitespace-pre-wrap text-slate-700">{{ solicitud.descripcion }}</div>
+      <dl class="mt-6 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
+        <div><dt class="text-xs uppercase tracking-wide text-slate-500">Solicitante</dt><dd class="mt-1 font-medium">{{ solicitud.solicitante }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wide text-slate-500">Agente</dt><dd class="mt-1 font-medium">{{ solicitud.agente|default:"Sin asignar" }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wide text-slate-500">Prioridad</dt><dd class="mt-1 font-medium">{{ solicitud.get_prioridad_display }}</dd></div>
+        <div><dt class="text-xs uppercase tracking-wide text-slate-500">Creación</dt><dd class="mt-1 font-medium">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</dd></div>
+        {% if solicitud.fecha_objetivo %}<div><dt class="text-xs uppercase tracking-wide text-slate-500">Fecha objetivo</dt><dd class="mt-1 font-medium">{{ solicitud.fecha_objetivo|date:"d/m/Y" }}</dd></div>{% endif %}
+        {% if solicitud.justificacion_prioridad %}<div class="sm:col-span-2"><dt class="text-xs uppercase tracking-wide text-slate-500">Justificación de prioridad</dt><dd class="mt-1">{{ solicitud.justificacion_prioridad }}</dd></div>{% endif %}
+      </dl>
+    </section>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6">
+      <h2 class="text-lg font-bold">Conversación</h2>
+      <div class="mt-4 space-y-4">
+        {% for comentario in comentarios %}
+        <article class="rounded-xl bg-slate-50 p-4">
+          <div class="flex justify-between gap-3"><p class="font-semibold">{{ comentario.autor }}</p><time class="text-xs text-slate-500">{{ comentario.fecha_creacion|date:"d/m/Y H:i" }}</time></div>
+          <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{{ comentario.texto }}</p>
+        </article>
+        {% empty %}<p class="text-sm text-slate-500">Aún no hay comentarios.</p>{% endfor %}
+      </div>
+      {% if puede_comentar %}
+      <form method="post" action="{% url 'agregar_comentario' solicitud.pk %}" class="mt-5 border-t border-slate-100 pt-5">
+        {% csrf_token %}
+        <label class="block text-sm font-medium">Agregar comentario {{ formulario_comentario.texto }}</label>
+        <button class="mt-3 rounded-xl bg-blue-700 px-4 py-2.5 font-semibold text-white hover:bg-blue-800">Publicar comentario</button>
+      </form>
+      {% endif %}
+    </section>
+    <section class="rounded-2xl border border-slate-200 bg-white p-6">
+      <h2 class="text-lg font-bold">Historial de cambios</h2>
+      <div class="mt-4 divide-y divide-slate-100">
+        {% for evento in eventos %}
+        <div class="py-3 text-sm"><p class="font-medium">{{ evento.accion }}{% if evento.campo_modificado %}: {{ evento.campo_modificado }}{% endif %}</p><p class="mt-1 text-xs text-slate-500">{{ evento.fecha|date:"d/m/Y H:i" }} · Actor {{ evento.actor_codificado|slice:":12" }}</p></div>
+        {% empty %}<p class="text-sm text-slate-500">Sin eventos registrados.</p>{% endfor %}
+      </div>
+    </section>
+  </div>
+  <aside class="space-y-5">
+    {% if puede_gestionar %}
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-bold">Gestión</h2>
+      <form method="post" action="{% url 'gestionar_solicitud' solicitud.pk %}" class="mt-4 space-y-4">
+        {% csrf_token %}
+        <label class="block text-sm font-medium">Agente {{ formulario_gestion.agente }}</label>
+        <label class="block text-sm font-medium">Prioridad {{ formulario_gestion.prioridad }}</label>
+        <label class="block text-sm font-medium">Justificación (obligatoria para prioridad alta) {{ formulario_gestion.justificacion_prioridad }}</label>
+        <label class="block text-sm font-medium">Fecha objetivo (obligatoria para prioridad alta) {{ formulario_gestion.fecha_objetivo }}</label>
+        <label class="block text-sm font-medium">Estado {{ formulario_gestion.estado }}</label>
+        <button class="w-full rounded-xl bg-blue-700 px-4 py-3 font-semibold text-white hover:bg-blue-800">Guardar cambios</button>
+      </form>
+    </section>
+    {% endif %}
+    {% if puede_comentar and solicitud.estado == "ASIGNADO" or puede_comentar and solicitud.estado == "REABIERTO" %}
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-bold">Iniciar atención</h2>
+      <form method="post" action="{% url 'estado_agente' solicitud.pk %}" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="estado" value="EN_PROCESO">
+        <button class="w-full rounded-xl border border-blue-700 px-4 py-3 font-semibold text-blue-800 hover:bg-blue-50">Cambiar a en proceso</button>
+      </form>
+    </section>
+    {% elif puede_comentar and solicitud.estado == "EN_PROCESO" %}
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-bold">Resolver solicitud</h2>
+      <form method="post" action="{% url 'estado_agente' solicitud.pk %}" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="estado" value="RESUELTO">
+        <button class="w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800">Marcar como resuelta</button>
+      </form>
+    </section>
+    {% endif %}
+    {% if puede_responder and solicitud.estado == "RESUELTO" or puede_responder and solicitud.estado == "CERRADO" %}
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-bold">{% if solicitud.estado == "RESUELTO" %}Cerrar solicitud{% else %}Reabrir solicitud{% endif %}</h2>
+      <form method="post" action="{% url 'cambiar_estado' solicitud.pk %}" class="mt-4 space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="estado" value="{% if solicitud.estado == 'RESUELTO' %}CERRADO{% else %}REABIERTO{% endif %}">
+        <label class="block text-sm font-medium">Motivo {{ formulario_motivo.motivo }}</label>
+        <button class="w-full rounded-xl border border-blue-700 px-4 py-3 font-semibold text-blue-800 hover:bg-blue-50">{% if solicitud.estado == "RESUELTO" %}Confirmar cierre{% else %}Confirmar reapertura{% endif %}</button>
+      </form>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

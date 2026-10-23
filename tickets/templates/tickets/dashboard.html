@@ -1,0 +1,59 @@
+{% extends "tickets/base.html" %}
+{% block title %}Solicitudes · Nexo{% endblock %}
+{% block content %}
+<div class="mb-7 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <p class="text-sm font-semibold uppercase tracking-widest text-blue-700">{% if es_coordinador %}Coordinación{% else %}Mesa de ayuda{% endif %}</p>
+    <h1 class="mt-1 text-3xl font-bold">Solicitudes</h1>
+    <p class="mt-1 text-slate-500">{% if es_coordinador %}Visión general y seguimiento operativo.{% elif user.rol == "AGENTE" %}Solicitudes asignadas a tu equipo.{% else %}Consulta y da seguimiento a tus solicitudes.{% endif %}</p>
+  </div>
+</div>
+
+{% if es_coordinador %}
+<section class="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  {% for item in estado_metricas %}
+  <article class="rounded-2xl border border-slate-200 bg-white p-5">
+    <p class="text-sm text-slate-500">{{ item.etiqueta }}</p>
+    <p class="mt-2 text-3xl font-bold">{{ item.total }}</p>
+  </article>
+  {% endfor %}
+  <article class="rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:col-span-2 lg:col-span-4">
+    <p class="text-sm font-medium text-blue-900">Mediana de tiempo de ciclo de solicitudes resueltas</p>
+    <p class="mt-1 text-2xl font-bold text-blue-950">{% if mediana_ciclo_horas != None %}{{ mediana_ciclo_horas|floatformat:1 }} horas{% else %}Sin datos{% endif %}</p>
+  </article>
+</section>
+{% endif %}
+
+{% if puede_crear %}
+<section class="mb-7 rounded-2xl border border-slate-200 bg-white p-6">
+  <h2 class="text-lg font-bold">Crear solicitud</h2>
+  <form method="post" action="{% url 'crear_solicitud' %}" class="mt-4 grid gap-4 md:grid-cols-2">
+    {% csrf_token %}
+    <label class="text-sm font-medium md:col-span-2">Título {{ formulario_solicitud.titulo }}</label>
+    <label class="text-sm font-medium">Categoría {{ formulario_solicitud.categoria }}</label>
+    <label class="text-sm font-medium md:col-span-2">Descripción {{ formulario_solicitud.descripcion }}</label>
+    <div><button class="rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800">Enviar solicitud</button></div>
+  </form>
+</section>
+{% endif %}
+
+<section class="rounded-2xl border border-slate-200 bg-white p-5">
+  <form method="get" action="{% url 'dashboard' %}" hx-get="{% url 'dashboard' %}" hx-trigger="input changed delay:350ms, change" hx-target="#ticket-results" hx-swap="innerHTML" class="grid gap-3 md:grid-cols-4">
+    <input name="q" value="{{ q }}" placeholder="Buscar título, descripción..." class="form-input md:col-span-2" aria-label="Buscar texto">
+    <select name="estado" class="form-input" aria-label="Filtrar por estado">
+      <option value="">Todos los estados</option>
+      {% for codigo, etiqueta in estados %}<option value="{{ codigo }}" {% if estado_seleccionado == codigo %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+    </select>
+    <select name="prioridad" class="form-input" aria-label="Filtrar por prioridad">
+      <option value="">Todas las prioridades</option>
+      {% for codigo, etiqueta in prioridades %}<option value="{{ codigo }}" {% if prioridad_seleccionada == codigo %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+    </select>
+    <input name="categoria" value="{{ categoria }}" placeholder="Categoría" class="form-input md:col-span-2" aria-label="Filtrar por categoría">
+    <button class="rounded-xl border border-slate-300 px-4 py-2 font-medium hover:bg-slate-50">Aplicar filtros</button>
+    <a href="{% url 'dashboard' %}" class="self-center text-center text-sm text-slate-500 hover:text-blue-700">Limpiar</a>
+  </form>
+  <div id="ticket-results" class="mt-5">
+    {% include "tickets/partials/lista_solicitudes.html" %}
+  </div>
+</section>
+{% endblock %}
